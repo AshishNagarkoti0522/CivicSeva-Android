@@ -12,13 +12,23 @@ import kotlinx.coroutines.flow.map
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "user_prefs")
 
 class UserPreferencesRepository(private val dataStore: DataStore<Preferences>) {
-    private val TOKKEN_KEY = stringPreferencesKey("auth_token")
+    private val ACCESS_TOKKEN = stringPreferencesKey("access_token")
+    private val REFRESH_TOKKEN = stringPreferencesKey("refresh_token")
 
-    val savedTokenFlow: Flow<String> = dataStore.data.map { it[TOKKEN_KEY] ?: "" }
+    val savedAccessTokenFlow: Flow<String> = dataStore.data.map { it[ACCESS_TOKKEN] ?: "" }
+    val savedRefreshTokenFlow: Flow<String> = dataStore.data.map { it[REFRESH_TOKKEN] ?: "" }
 
-    suspend fun saveToken(token: String) {
+    suspend fun saveTokens(access: String, refresh: String) {
         dataStore.edit {
-            it[TOKKEN_KEY] = token
+            it[ACCESS_TOKKEN] = access
+            it[REFRESH_TOKKEN] = refresh
+        }
+    }
+
+    suspend fun clearTokens() {
+        dataStore.edit{
+            it.remove(ACCESS_TOKKEN)
+            it.remove(REFRESH_TOKKEN)
         }
     }
 }

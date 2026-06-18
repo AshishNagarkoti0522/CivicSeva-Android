@@ -8,36 +8,34 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.civicseva.data.ApiService
 import com.example.civicseva.data.UserPreferencesRepository
-import com.example.civicseva.data.signup.SignupRequest
-import com.example.civicseva.model.signupmodel.SignUpScreenEvent
-import com.example.civicseva.model.signupmodel.SignupUistate
-import com.example.civicseva.model.signupmodel.SignupScreenState
+import com.example.civicseva.data.signin.SignInRequest
+import com.example.civicseva.model.UiEvent
+import com.example.civicseva.model.signinmodel.SignInScreenEvent
+import com.example.civicseva.model.signinmodel.SignInScreenState
+import com.example.civicseva.model.signinmodel.SignInUiState
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class SignupVM(
+class SignInVM(
     private val apiService: ApiService,
     private val repository: UserPreferencesRepository
 ): ViewModel() {
-    private val _uiState = MutableStateFlow<SignupUistate>(SignupUistate.Idle)
+    private val _uiState = MutableStateFlow<SignInUiState>(SignInUiState.Idle)
     val uiState = _uiState.asStateFlow()
 
-    var screenState by mutableStateOf(SignupScreenState())
+    private val _uiEvent = Channel<UiEvent>()
+    val uiEvent = _uiEvent.receiveAsFlow()
+
+    var screenState by mutableStateOf(SignInScreenState())
         private set
 
-    fun onEvent(event: SignUpScreenEvent) {
+    fun onEvent(event: SignInScreenEvent) {
         when(event) {
-            is SignUpScreenEvent.NameTyped -> {
-                screenState = screenState.copy(
-                    name = screenState.name.copy(
-                        value = event.name,
-                        errorMessage = null
-                    )
-                )
-            }
-            is SignUpScreenEvent.EmailTyped -> {
+            is SignInScreenEvent.EmailTyped -> {
                 screenState = screenState.copy(
                     email = screenState.email.copy(
                         value = event.email,
@@ -45,7 +43,7 @@ class SignupVM(
                     )
                 )
             }
-            is SignUpScreenEvent.PasswordTyped -> {
+            is SignInScreenEvent.PasswordTyped -> {
                 screenState = screenState.copy(
                     password = screenState.password.copy(
                         value = event.password,
@@ -53,19 +51,11 @@ class SignupVM(
                     )
                 )
             }
-            is SignUpScreenEvent.SubmitRequest -> {
-                if (screenState.name.value.isBlank()) {
-                    screenState = screenState.copy(
-                        name = screenState.name.copy(
-                            errorMessage = "Name cannot bhi empty"
-                        )
-                    )
-                    return
-                }
+            is SignInScreenEvent.SubmitRequest -> {
                 if (screenState.email.value.isBlank()) {
                     screenState = screenState.copy(
                         email = screenState.email.copy(
-                            errorMessage = "Email cannot bhi empty"
+                            errorMessage = "Email is required"
                         )
                     )
                     return
@@ -73,7 +63,7 @@ class SignupVM(
                 if (screenState.password.value.isBlank()) {
                     screenState = screenState.copy(
                         password = screenState.password.copy(
-                            errorMessage = "Password cannot bhi empty"
+                            errorMessage = "Password is required"
                         )
                     )
                     return
@@ -81,7 +71,7 @@ class SignupVM(
                 if (!screenState.email.value.contains("@") || !screenState.email.value.contains(".")) {
                     screenState = screenState.copy(
                         email = screenState.email.copy(
-                            errorMessage = "Invalid email"
+                            errorMessage = "Enter a valid email address"
                         )
                     )
                     return
@@ -94,49 +84,53 @@ class SignupVM(
                     )
                     return
                 }
-                signUp(
-                    name = screenState.name.value.trim(),
+                signIn(
                     password = screenState.password.value.trim(),
                     email = screenState.email.value.trim()
                 )
             }
-            is SignUpScreenEvent.Retry -> {
-                _uiState.update { SignupUistate.Idle }
+            is SignInScreenEvent.Retry -> {
+                _uiState.update { SignInUiState.Idle }
             }
         }
     }
 
-    private fun signUp(
-        name: String,
+    private fun signIn(
         email: String,
         password: String
     ) {
         viewModelScope.launch {
-            _uiState.update { SignupUistate.Loading }
+            _uiState.update { SignInUiState.Loading }
 
             try {
-                val request = SignupRequest(fullName = name, email = email, password = password)
-                val response = apiService.signup(request)
+                val request = SignInRequest(
+                    email = email,
+                    password = password
+                )
+                val response = apiService.signin(request)
                 if (response.isSuccessful) {
                     val data = response.body()
-                    val token = response.body()?.data?.accessToken
-                    if (token != null) {
-                        repository.saveToken(token)
-                        if (data != null) {
-                            _uiState.update { SignupUistate.Success(data = data) }
-                        } else {
-                            _uiState.update { SignupUistate.Error("no user data") }
-                        }
+                    val accessToken = response.body()?.data?.accessToken
+                    val refreshToken = response.body()?.data?.refreshToken
+                    if (data != null && accessToken != null && refreshToken != null) {
+                        repository.saveTokens(access = accessToken, refresh = refreshToken)
+
+                        _uiState.update { SignInUiState.Success(data = data) }
+                        _uiEvent.send(UiEvent.NavigateToHome)
+
                     } else {
-                        _uiState.update { SignupUistate.Error("Token missing") }
+                        _uiEvent.send(UiEvent.ShowToast("Invalid data or tokens missing"))
+                        _uiState.update { SignInUiState.Idle }
                     }
                 } else {
                     val message = response.errorBody()?.string() ?: "Something went wrong"
-                    _uiState.update { SignupUistate.Error(message) }
+                    _uiEvent.send(UiEvent.ShowToast(message))
+                    _uiState.update { SignInUiState.Idle }
                 }
             } catch (e: Exception) {
-                _uiState.update { SignupUistate.Error("please check your internet connection") }
-                Log.e("SignupVM", "signUp: ${e.localizedMessage}")
+                _uiEvent.send(UiEvent.ShowToast("please check your internet connection"))
+                _uiState.update { SignInUiState.Idle }
+                Log.e("SignInVM", "signUp: ${e.localizedMessage}")
             }
         }
     }

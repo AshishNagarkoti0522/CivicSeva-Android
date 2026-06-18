@@ -2,4 +2,13 @@
     <string name="app_name">Civic Seva</string>
     <string name="sign_up">Sign Up</string>
     <string name="retry">Retry</string>
+    <string name="enter_your_full_name">Enter your full name</string>
+    <string name="enter_your_email">Enter your email</string>
+    <string name="enter_your_password">Enter your password</string>
+    <string name="password">Password</string>
+    <string name="email">Email</string>
+    <string name="name">Name</string>
+    <string name="already_have_an_account_sign_in">Already have an account? Sign In</string>
+    <string name="sign_in">Sign In</string>
+    <string name="don_t_have_an_account_sign_up">Don\'t have an account? Sign Up</string>
 </resources>

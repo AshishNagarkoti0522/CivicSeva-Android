@@ -13,15 +13,26 @@ object RetrofitHelper {
     private val networkJson = Json { ignoreUnknownKeys = true }
 
     fun apiService(repository: UserPreferencesRepository): ApiService {
+        val plainOkHttpClient = OkHttpClient.Builder().build()
+
+        val tokenApi = Retrofit.Builder()
+            .baseUrl(BASE_URL)
+            .client(plainOkHttpClient)
+            .addConverterFactory(networkJson.asConverterFactory("application/json".toMediaType()))
+            .build()
+            .create(TokenRefreshApi::class.java)
+
+        val authenticator = TokenAuthenticator(repository = repository, api = tokenApi)
         val authInterceptor = AuthInterceptor(repository)
 
-        val okHttpClient = OkHttpClient.Builder()
+        val mainOkHttpClient = OkHttpClient.Builder()
             .addInterceptor(authInterceptor)
+            .authenticator(authenticator)
             .build()
 
         return Retrofit.Builder()
             .baseUrl(BASE_URL)
-            .client(okHttpClient)
+            .client(mainOkHttpClient)
             .addConverterFactory(networkJson.asConverterFactory("application/json".toMediaType()))
             .build()
             .create(ApiService::class.java)
