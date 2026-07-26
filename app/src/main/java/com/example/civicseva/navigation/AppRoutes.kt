@@ -2,11 +2,22 @@ package com.example.civicseva.navigation
 
 import kotlinx.serialization.Serializable
 
-@Serializable
-object SignUpRoute
+sealed interface AppRoutes {
+    @Serializable
+    data object SignUpRoute : AppRoutes
 
-@Serializable
-object SignInRoute
+    @Serializable
+    data object SignInRoute : AppRoutes
 
-@Serializable
-object HomeRoute
+    @Serializable
+    data object MainRoute : AppRoutes
+
+    @Serializable
+    data object HomeRoute : AppRoutes
+
+    @Serializable
+    data object ProfileRoute : AppRoutes
+
+    @Serializable
+    data object CreatePostRoute : AppRoutes
+}

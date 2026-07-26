@@ -8,8 +8,8 @@ import kotlinx.serialization.Serializable
 data class SignUpRequest(
     @SerialName("email")
     val email: String,
-    @SerialName("fullName")
-    val fullName: String,
     @SerialName("password")
-    val password: String
+    val password: String,
+    @SerialName("username")
+    val username: String
 )

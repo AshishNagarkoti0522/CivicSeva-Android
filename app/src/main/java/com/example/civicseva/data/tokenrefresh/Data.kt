@@ -1,5 +1,4 @@
-package com.example.civicseva.data.signup
-
+package com.example.civicseva.data.tokenrefresh
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable

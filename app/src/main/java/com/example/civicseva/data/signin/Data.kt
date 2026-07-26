@@ -6,14 +6,6 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Data(
-    @SerialName("accessToken")
-    val accessToken: String,
-    @SerialName("email")
-    val email: String,
-    @SerialName("fullName")
-    val fullName: String,
-    @SerialName("refreshToken")
-    val refreshToken: String,
-    @SerialName("userId")
-    val userId: Int
+    @SerialName("tokens")
+    val tokens: Tokens
 )

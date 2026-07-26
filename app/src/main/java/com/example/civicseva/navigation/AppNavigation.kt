@@ -1,83 +1,71 @@
 package com.example.civicseva.navigation
 
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.runtime.Composable
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavOptionsBuilder
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.example.civicseva.data.ApiService
-import com.example.civicseva.data.UserPreferencesRepository
-import com.example.civicseva.screen.HomeScreen
-import com.example.civicseva.screen.SignInScreen
-import com.example.civicseva.screen.SignUpScreen
-import com.example.civicseva.viewmodel.SignInVM
-import com.example.civicseva.viewmodel.SignUpVM
+import com.example.civicseva.features.main.MainScreen
+import com.example.civicseva.features.signin.SignInScreen
+import com.example.civicseva.features.signup.SignUpScreen
+import com.example.civicseva.features.signin.SignInVM
+import com.example.civicseva.features.signup.SignUpVM
 
 @Composable
-fun AppNavigation(
-    apiService: ApiService,
-    repository: UserPreferencesRepository
-) {
+fun AppNavigation() {
     val navController = rememberNavController()
 
-    NavHost(navController = navController, startDestination = SignUpRoute) {
-        composable<SignUpRoute> {
-            @Suppress("UNCHECKED_CAST")
-            val signUpFactory = object : ViewModelProvider.Factory {
-                override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return SignUpVM(apiService, repository) as T
-                }
-            }
-
-            val signUpVM: SignUpVM = viewModel(factory = signUpFactory)
+    NavHost(
+        navController = navController,
+        startDestination = AppRoutes.SignUpRoute,
+        enterTransition = { EnterTransition.None },
+        exitTransition = { ExitTransition.None },
+        popEnterTransition = { EnterTransition.None },
+        popExitTransition = { ExitTransition.None },
+    ) {
+        composable<AppRoutes.SignUpRoute> {
+            val signUpVM: SignUpVM = hiltViewModel()
 
             SignUpScreen(
                 vm = signUpVM,
                 onSignInClick = {
-                    navController.navigateSafe(SignInRoute) {
-                        popUpTo(SignUpRoute) { inclusive = true }
+                    navController.navigateSafe(AppRoutes.SignInRoute) {
+                        popUpTo(AppRoutes.SignUpRoute) { inclusive = true }
                     }
                 },
                 onAuthSuccess = {
-                    navController.navigateSafe(HomeRoute) {
+                    navController.navigateSafe(AppRoutes.MainRoute) {
                         popUpTo(0) { inclusive = true }
                     }
                 }
             )
         }
 
-        composable<SignInRoute> {
-            @Suppress("UNCHECKED_CAST")
-            val signInFactory = object : ViewModelProvider.Factory {
-                override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    return SignInVM(apiService, repository) as T
-                }
-            }
-
-            val signInVM: SignInVM = viewModel(factory = signInFactory)
+        composable<AppRoutes.SignInRoute> {
+            val signInVM: SignInVM = hiltViewModel()
 
             SignInScreen(
                 vm = signInVM,
                 onSignUpClick = {
-                    navController.navigateSafe(SignUpRoute) {
-                        popUpTo(SignInRoute) { inclusive = true }
+                    navController.navigateSafe(AppRoutes.SignUpRoute) {
+                        popUpTo(AppRoutes.SignInRoute) { inclusive = true }
                     }
                 },
                 onAuthSuccess = {
-                    navController.navigateSafe(HomeRoute) {
+                    navController.navigateSafe(AppRoutes.MainRoute) {
                         popUpTo(0) { inclusive = true }
                     }
                 }
             )
         }
 
-        composable<HomeRoute> {
-            HomeScreen()
+        composable<AppRoutes.MainRoute> {
+            MainScreen()
         }
     }
 }
@@ -88,8 +76,14 @@ fun NavHostController.navigateSafe(
 ) {
     if (this.currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) {
         navigate(route) {
-            launchSingleTop = true // Double click se bachane ke liye default
-            builder() // Custom rules (jaise popUpTo) yahan inject ho jayenge
+            launchSingleTop = true
+            builder()
         }
+    }
+}
+
+fun NavHostController.popBackStackSafe() {
+    if (this.currentBackStackEntry?.lifecycle?.currentState == Lifecycle.State.RESUMED) {
+        popBackStack()
     }
 }
